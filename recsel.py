@@ -1,7 +1,7 @@
+from matplotlib import use
+use('Qt4Agg')
 from matplotlib.widgets import  RectangleSelector
 from pylab import *
-
-
 
 
 def select_area(input_image):
@@ -13,14 +13,14 @@ def select_area(input_image):
           - otherwise, redraw another rectangle, or press 'R' or 'r' to redo
     """
     im = input_image
-    fig = figure()
+    fig = figure(1)
     ax = subplot(211)
     ax.imshow(im)
     title('Input Image')
     bx = subplot(212)
     title('Masked Image')
-    mask = ones(im.shape)
-    bx.imshow(mask*im)
+    start_mask = ones(im.shape)
+    bx.imshow(start_mask*im)
 
     
     def onselect(eclick, erelease):
@@ -34,10 +34,9 @@ def select_area(input_image):
       print ' endposition   : (%f, %f)' % (erelease.xdata, erelease.ydata)
       print ' used button   : ', eclick.button
 
-      mask = create_mask(startx, starty, endx, endy, im)
-      #bx = subplot(212)
-      #title('Masked Image')
-      bx.imshow(mask*im)
+      toggle_selector.mask = create_mask(startx, starty, endx, endy, im)
+
+      bx.imshow(toggle_selector.mask*im)
       toggle_selector.RS.update()
 
     def toggle_selector(event):
@@ -45,25 +44,25 @@ def select_area(input_image):
         if event.key in ['A', 'a'] and toggle_selector.RS.active:
             print ' RectangleSelector deactivated - Mask accepted'
             toggle_selector.RS.set_active(False)
-            return mask
+            close()
+            return toggle_selector.mask
 
             
         if event.key in ['R', 'r'] and toggle_selector.RS.active:
             print 'Redoing rectangle.'
             toggle_selector.RS.set_active(True)
-            #bx = subplot(212)
-            #title('Masked Image')
-            bx.imshow(im)
+            toggle_selector.mask = start_mask
+            bx.imshow(toggle_selector.mask*im)
             toggle_selector.RS.update()
 
-    
-    
-    
+      
+
     toggle_selector.RS = RectangleSelector(ax, onselect, drawtype='box')
     connect('key_press_event', toggle_selector)
-    show()
+    show(block=True)
         
-
+     
+    return toggle_selector.mask
     
 
 
@@ -78,7 +77,9 @@ def create_mask(startx, starty, endx, endy, im):
     
     mask[minr:maxr, minc:maxc, :] = 1
     return mask
-    
+
+
 im = imread('test.png')
-select_area(im)
-    
+test = select_area(im)
+imshow(test)
+show()    
