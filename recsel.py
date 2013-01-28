@@ -3,7 +3,8 @@
 from matplotlib import use
 use('Qt4Agg')
 from matplotlib.widgets import  RectangleSelector
-from pylab import *
+#from pylab import *
+from pylab import imsave, imshow, show, figure, subplot, title, close
 from scipy.misc import imsave
 
 def select_area(input_image):
@@ -28,7 +29,7 @@ def select_area(input_image):
     title('Input Image')
     bx = subplot(212)
     title('Masked Image')
-    start_mask = ones(im.shape)
+    start_mask = np.ones(im.shape)
     bx.imshow(start_mask*im)
 
     
@@ -79,10 +80,10 @@ def select_area(input_image):
 def create_mask(startx, starty, endx, endy, im):
     """Return mask of same size input image that only shows selected box"""
     mask = zeros(im.shape)
-    minc = min(startx, endx)
-    minr = min(starty, endy)
-    maxc = max(startx, endx)
-    maxr = max(starty, endy)
+    minc = np.min(startx, endx)
+    minr = np.min(starty, endy)
+    maxc = np.max(startx, endx)
+    maxr = np.max(starty, endy)
     
     mask[minr:maxr, minc:maxc, :] = 1
     return mask
