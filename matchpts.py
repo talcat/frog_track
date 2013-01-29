@@ -6,7 +6,53 @@ from matplotlib.widgets import  RectangleSelector
 from pylab import *
 import cv2
 
-def getpts(mask0, im0):
+
+def better_mask(mask0, im0):
+    """Uses OpenCV's blob detector to try and define a better mask such that
+    only points on the frog are found in the feature detector surf/sift/orb"""
+    
+    #convert im0 to 8bit 
+    im0 = 255*cv2.cvtColor(im0, cv2.COLOR_RGB2GRAY)
+    mask0 = 255*cv2.cvtColor(mask0, cv2.COLOR_RGB2GRAY)
+    #mask it
+    im0 = im0.astype('uint8')
+    mask0 = mask0.astype('uint8')
+    
+    #Create a blob detector
+    blob = cv2.FeatureDetector_create('SimpleBlob')
+    kp = blob.detect(im0, mask0)
+    
+    return kp
+
+def init_feature(name):
+    """Copied from find_obj in OpenCV python2 examples"""
+    chunks = name.split('-')
+    if chunks[0] == 'sift':
+        detector = cv2.SIFT(nfeatures=5)
+        norm = cv2.NORM_L2
+    elif chunks[0] == 'surf':
+        detector = cv2.SURF(400)
+        norm = cv2.NORM_L2
+    elif chunks[0] == 'orb':
+        detector = cv2.ORB(400)
+        norm = cv2.NORM_HAMMING
+    else:
+        return None, None
+    if 'flann' in chunks:
+        if norm == cv2.NORM_L2:
+            flann_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
+        else:
+            flann_params= dict(algorithm = FLANN_INDEX_LSH,
+                               table_number = 6, # 12
+                               key_size = 12,     # 20
+                               multi_probe_level = 1) #2
+        matcher = cv2.FlannBasedMatcher(flann_params, {})  # bug : need to pass empty dict (#1329)
+    else:
+        matcher = cv2.BFMatcher(norm)
+    return detector, matcher
+    
+
+def getpts(mask0, im0, detector='surf'):
     """ASSUMING SMALL MOVEMENTS, the roi between 2 adjacent frames should be the
     same.  Thus, between two pairs of images, the same mask is used.
     This calculates SURF points for two sequential images, and matches them.  
@@ -16,13 +62,16 @@ def getpts(mask0, im0):
     im0 = cv2.cvtColor(im0, cv2.COLOR_RGB2GRAY)
     mask0 = cv2.cvtColor(mask0, cv2.COLOR_RGB2GRAY)
     
-    thesurf = cv2.SIFT()
+    detector, _ = init_feature(detector)
     
     #uint8:
     im0 = im0*255
     mask0 = mask0*255
     
-    kp, descriptors = thesurf.detectAndCompute(im0.astype('uint8'), mask0.astype('uint8'))
+    #normalize frog image....
+    im0 = cv2.equalizeHist(im0.astype('uint8'))
+    
+    kp, descriptors = detector.detectAndCompute(im0.astype('uint8'), mask0.astype('uint8'))
 
     
     return kp, descriptors
@@ -41,16 +90,23 @@ def filter_matches(kp1, kp2, matches, ratio = 0.75):
     return p1, p2, kp_pairs
     
  
-def explore_match(win, img1, img2, kp_pairs, status = None, H = None):
+def explore_match(win, img1, img2, kp_pairs, mask=None, status = None, H = None):
     """Copied from OpenCV find_obj example.
     win = name of window
-    kp_pairs = pairs found from matchpts"""
+    kp_pairs = pairs found from matchpts
+    edited to allow for the mask
+    No onmouse event
+    """
     h1, w1 = img1.shape[:2]
     h2, w2 = img2.shape[:2]
  
     #Color conversion >_<)
     img1 = 255*cv2.cvtColor(img1, cv2.COLOR_RGB2GRAY)
     img2 = 255*cv2.cvtColor(img2, cv2.COLOR_RGB2GRAY) 
+    if mask != None:
+        mask = cv2.cvtColor(mask, cv2.COLOR_RGB2GRAY)
+        img1 = img1*mask
+        img2 = img2*mask
     
  
     vis = np.zeros((max(h1, h2), w1+w2), np.uint8)
@@ -91,38 +147,16 @@ def explore_match(win, img1, img2, kp_pairs, status = None, H = None):
             cv2.line(vis, (x1, y1), (x2, y2), green)
 
     cv2.imshow(win, vis)
-    def onmouse(event, x, y, flags, param):
-        cur_vis = vis
-        if flags & cv2.EVENT_FLAG_LBUTTON:
-            cur_vis = vis0.copy()
-            r = 8
-            m = (anorm(p1 - (x, y)) < r) | (anorm(p2 - (x, y)) < r)
-            idxs = np.where(m)[0]
-            kp1s, kp2s = [], []
-            for i in idxs:
-                 (x1, y1), (x2, y2) = p1[i], p2[i]
-                 col = (red, green)[status[i]]
-                 cv2.line(cur_vis, (x1, y1), (x2, y2), col)
-                 kp1, kp2 = kp_pairs[i]
-                 kp1s.append(kp1)
-                 kp2s.append(kp2)
-            cur_vis = cv2.drawKeypoints(cur_vis, kp1s, flags=4, color=kp_color)
-            cur_vis[:,w1:] = cv2.drawKeypoints(cur_vis[:,w1:], kp2s, flags=4, color=kp_color)
 
-        cv2.imshow(win, cur_vis)
-    cv2.setMouseCallback(win, onmouse)
     return vis
  
- 
- 
-       
-def matchpts(kp0, des0, kp1, des1):
+         
+def matchpts(kp0, des0, kp1, des1, matcher='surf'):
     """Uses OpenCV Brute-force descriptor matcher (BFFMatcher) to match SURF 
     points found in im0 and im1.
     A lot of this is copies/modified from opencv's find_obj example script"""
     
-    norm = cv2.NORM_L2
-    matcher = cv2.BFMatcher(norm)
+    _, matcher = init_feature(matcher)
     
     raw_matches = matcher.knnMatch(des0, trainDescriptors = des1, k = 2) 
 
@@ -137,17 +171,46 @@ def matchpts(kp0, des0, kp1, des1):
         print '%d matches found, not enough for homography estimation' % len(p0)
     
     return kp_pairs, status, H
+   
+def get_pts(kp_pairs):
+    """Given the matched pairs of KeyPoints, will return 2 numpy arrays (1 for
+    each image) of the point locations of matched points"""
+    p1 = np.int32([kpp[0].pt for kpp in kp_pairs])
+    p2 = np.int32([kpp[1].pt for kpp in kp_pairs]) 
     
+    return p1, p2
     
+def euc_dis(p0, p1):
+    """Given a pair of points: [p0r, p0c] and [p1r, p1c] will return the euclidian
+    distance between them = i.e. the distance that point moved between two images"""
+    
+    p0r, p0c = p0
+    p1r, p1c = p1
+     
+    dis = np.sqrt( (p1r - p0r)**2 + (p1c - p0c)**2)
+     
+    return dis
+       
+
 if __name__ == "__main__":
     mask0 = imread('mask-0.png')
     im0 = imread('im-0.png')
     im1 = imread('im-1.png')
     
-    kp0, descriptors0 = getpts(mask0, im0)
-    kp1, descriptors1 = getpts(mask0, im1)
+    det = 'surf'
     
-    kp_pairs, status, H = matchpts(kp0, descriptors0, kp1, descriptors1)
+    kp0, descriptors0 = getpts(mask0, im0, det)
+    kp1, descriptors1 = getpts(mask0, im1, det)
     
-    explore_match("test", im0, im1, kp_pairs, status, H)
+    kp_pairs, status, H = matchpts(kp0, descriptors0, kp1, descriptors1, det)
     
+    if len(kp_pairs) > 0:
+        explore_match("test", im0, im1, kp_pairs, mask0)
+    else:
+        print 'No matches found :/'
+        
+    p0, p1 = get_pts(kp_pairs)
+    
+    corr = [ (p0[1], p1[i]) for i in range(len(p0))]
+    dis = map(lambda (x, y): euc_dis(x, y), corr) 
+         
