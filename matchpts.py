@@ -13,7 +13,7 @@ def better_mask(mask0, im0):
     
     #convert im0 to 8bit 
     im0 = 255*cv2.cvtColor(im0, cv2.COLOR_RGB2GRAY)
-    mask0 = 255*cv2.cvtColor(mask0, cv2.COLOR_RGB2GRAY)
+    mask0 = 255*cv2.cvtColor(mask0.astype('float32'), cv2.COLOR_RGB2GRAY)
     #mask it
     im0 = im0.astype('uint8')
     mask0 = mask0.astype('uint8')
@@ -60,7 +60,7 @@ def getpts(mask0, im0, detector='surf'):
     The velocity is returned so the ROI can be updated"""
     
     im0 = cv2.cvtColor(im0, cv2.COLOR_RGB2GRAY)
-    mask0 = cv2.cvtColor(mask0, cv2.COLOR_RGB2GRAY)
+    mask0 = cv2.cvtColor(mask0.astype('float32'), cv2.COLOR_RGB2GRAY)
     
     detector, _ = init_feature(detector)
     
@@ -104,7 +104,7 @@ def explore_match(win, img1, img2, kp_pairs, mask=None, status = None, H = None)
     img1 = 255*cv2.cvtColor(img1, cv2.COLOR_RGB2GRAY)
     img2 = 255*cv2.cvtColor(img2, cv2.COLOR_RGB2GRAY) 
     if mask != None:
-        mask = cv2.cvtColor(mask, cv2.COLOR_RGB2GRAY)
+        mask = cv2.cvtColor(mask.astype('float32'), cv2.COLOR_RGB2GRAY)
         img1 = img1*mask
         img2 = img2*mask
     
@@ -182,7 +182,7 @@ def get_pts(kp_pairs):
     
 def euc_dis(p0, p1):
     """Given a pair of points: [p0r, p0c] and [p1r, p1c] will return the euclidian
-    distance between them = i.e. the distance that point moved between two images"""
+    distance between them = i.e. the distance that point moved between two images."""
     
     p0r, p0c = p0
     p1r, p1c = p1
@@ -191,13 +191,85 @@ def euc_dis(p0, p1):
      
     return dis
        
+def direc(p0, p1):
+    """Given a pair of points [p0r, p0c] and [p1r, p1c] will return the the angle
+    AKA direction in radians that the point moved"""
+    
+    p0r, p0c = p0
+    p1r, p1c = p1
+    
+    delr = p1r - p0r
+    delc = p1c - p0c
+    #np.arctan2(y, x)
+    return np.arctan2(delr, delc)       
+       
+
+def remove_outliers(kp_pairs):
+    """For kp_pairs, removes the point pairs that are outliers depending on the 
+    vector magnitude and vector angle according to 'any poin tthat is more than 
+    1.5 IQRs (interquantile range) below the first anf above the 3rd quantile"""
+    p0, p1 = get_pts(kp_pairs)
+    
+    corr = [ (p0[1], p1[i]) for i in range(len(p0))]
+    dis = map(lambda (x, y): euc_dis(x, y), corr) 
+    ang = map(lambda (x, y): direc(x, y), corr) 
+    
+    #for distance
+    dis2 = np.sort(dis)
+    med = np.median(dis2)
+    low50 = dis2[dis2<med]
+    high50 = dis2[dis2>med]
+    dlowmed = np.median(low50)
+    dhighmed = np.median(high50)
+    
+    dIQR = 1.5*(dhighmed - dlowmed)  # 3rd quant - 1st quant
+    #dis = np.array(dis)
+    #dis = dis[dis <= (highmed + IQR)]
+    #dis = dis[dis >= (lowmed - IQR)]
+    
+    #for direction
+    ang2 = np.sort(ang)
+    med = np.median(ang2)
+    low50 = ang2[ang2<med]
+    high50 = ang2[ang2>med]
+    alowmed = np.median(low50)
+    ahighmed = np.median(high50)
+    
+    aIQR = 1.5*(ahighmed - alowmed)  # 3rd quant - 1st quant
+    #ang = np.array(ang)
+    #ang = ang[ang <= (highmed + IQR)]
+    #ang = ang[ang >= (lowmed - IQR)]
+    
+    p0 = np.array(p0)
+    p1 = np.array(p1)
+    
+    p0 = p0[(ang <= (ahighmed + aIQR)) & (ang >= (alowmed - aIQR)) & 
+            (dis <= (dhighmed + dIQR)) & (dis >= (dlowmed - dIQR))] 
+    p1 = p1[(ang <= (ahighmed + aIQR)) & (ang >= (alowmed - aIQR)) & 
+            (dis <= (dhighmed + dIQR)) & (dis >= (dlowmed - dIQR))] 
+    
+    return p0, p1
+
+
+def avg_vec(out0, out1):
+    """Given a list of points [[p0r, p0c]], [[p1r, p1c]] will calculate the 
+    avg vector"""
+    
+    length = len(out0)
+    delta = out1 - out0
+    r = mean(delta[:, 0])
+    c = mean(delta[:, 1])
+    
+    return [r, c]
+    
+
 
 if __name__ == "__main__":
     mask0 = imread('mask-0.png')
     im0 = imread('im-0.png')
     im1 = imread('im-1.png')
     
-    det = 'surf'
+    det = 'sift'
     
     kp0, descriptors0 = getpts(mask0, im0, det)
     kp1, descriptors1 = getpts(mask0, im1, det)
@@ -208,9 +280,15 @@ if __name__ == "__main__":
         explore_match("test", im0, im1, kp_pairs, mask0)
     else:
         print 'No matches found :/'
+
         
     p0, p1 = get_pts(kp_pairs)
     
-    corr = [ (p0[1], p1[i]) for i in range(len(p0))]
-    dis = map(lambda (x, y): euc_dis(x, y), corr) 
+    #corr = [ (p0[1], p1[i]) for i in range(len(p0))]
+    #dis = map(lambda (x, y): euc_dis(x, y), corr) 
+    #ang = map(lambda (x, y): direc(x, y), corr) 
+    
+    out0, out1 = remove_outliers(kp_pairs)
+    
+    avg = avg_vec(out0, out1)
          

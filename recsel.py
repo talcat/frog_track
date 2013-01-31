@@ -1,10 +1,11 @@
 # recsel.py
 
 from matplotlib import use
+import numpy as np
 use('Qt4Agg')
 from matplotlib.widgets import  RectangleSelector
 #from pylab import *
-from pylab import imsave, imshow, show, figure, subplot, title, close
+from pylab import imread, imshow, show, figure, subplot, title, close, connect
 from scipy.misc import imsave
 
 def select_area(input_image):
@@ -40,9 +41,9 @@ def select_area(input_image):
       endx = erelease.xdata
       endy = erelease.ydata
   
-      #print ' startposition : (%f, %f)' % (eclick.xdata, eclick.ydata)
-      #print ' endposition   : (%f, %f)' % (erelease.xdata, erelease.ydata)
-      #print ' used button   : ', eclick.button
+      print ' startposition : (%f, %f)' % (eclick.xdata, eclick.ydata)
+      print ' endposition   : (%f, %f)' % (erelease.xdata, erelease.ydata)
+      print ' used button   : ', eclick.button
 
       toggle_selector.mask = create_mask(startx, starty, endx, endy, im)
 
@@ -79,11 +80,11 @@ def select_area(input_image):
 
 def create_mask(startx, starty, endx, endy, im):
     """Return mask of same size input image that only shows selected box"""
-    mask = zeros(im.shape)
-    minc = np.min(startx, endx)
-    minr = np.min(starty, endy)
-    maxc = np.max(startx, endx)
-    maxr = np.max(starty, endy)
+    mask = np.zeros(im.shape)
+    minc = np.min([startx, endx])
+    minr = np.min([starty, endy])
+    maxc = np.max([startx, endx])
+    maxr = np.max([starty, endy])
     
     mask[minr:maxr, minc:maxc, :] = 1
     return mask

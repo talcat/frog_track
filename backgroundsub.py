@@ -50,29 +50,44 @@ class FrogFrames:
         
         return im
 
-bgs = cv2.BackgroundSubtractorMOG(50, 5, .9, 0.01)
+    def get_frame(self, num):
+        """Returns frame number <num> mod number of frames
+        NOTE: first frame is frame 0"""
+        num = np.mod(num, len(self.list))
 
-video = FrogFrames('/home/talcat/Desktop/Bio Interface/Frogs/frog_frame/Shot2/', False)
-cv2.namedWindow("input")
-
-cond = True
-while(cond):
-    
-    img = video.get_next_im()
-    if img == None:
-        cond=False
-        break
+        im = imread('%s%s' % (self.path, self.list[num]))   
         
-    img = cv2.equalizeHist(img.astype('uint8'))
-    img = cv2.adaptiveThreshold(img, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 7, 15)
-    #fgmask = bgs.apply(img)
+        if self.gray:
+            im = 255*cv2.cvtColor(im, cv2.COLOR_RGB2GRAY)
+            im = im.astype('uint8')
+            
+        return im
+        
     
-    cv2.imshow("input", img)
-    key = cv2.waitKey(3)
-    #cv2.imwrite("./pngs/image-"+str(a).zfill(5)+".png", fgmask)
+if __name__ == "__main__":
+    bgs = cv2.BackgroundSubtractorMOG(50, 5, .9, 0.01)
+
+    video = FrogFrames('/home/talcat/Desktop/Bio Interface/Frogs/frog_frame/Shot2/', False)
+    cv2.namedWindow("input")
+
+    cond = True
+    while(cond):
     
-    if key ==32:
-        cond=False
-    
-    #print(video.index)
-cv2.destroyAllWindows()
+        img = video.get_next_im()
+        if img == None:
+            cond=False
+            break
+            
+        img = cv2.equalizeHist(img.astype('uint8'))
+        img = cv2.adaptiveThreshold(img, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 7, 15)
+        #fgmask = bgs.apply(img)
+        
+        cv2.imshow("input", img)
+        key = cv2.waitKey(3)
+        #cv2.imwrite("./pngs/image-"+str(a).zfill(5)+".png", fgmask)
+        
+        if key ==32:
+            cond=False
+        
+        #print(video.index)
+    cv2.destroyAllWindows() 
