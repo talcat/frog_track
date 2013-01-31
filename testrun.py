@@ -9,14 +9,18 @@ from backgroundsub import FrogFrames
 
 #Get frog videos
 video = FrogFrames('/home/talcat/Desktop/Bio Interface/Frogs/frog_frame/Shot2/', 
-                    loop=False, gray=False)
+                    loop=True, gray=False)
 cv2.namedWindow("input")
-
+#video.list = video.list[0:5]
 #intialize mask
 prev = video.get_next_im()
-mask = select_area(prev)
-avg = [0, 0]
 
+mask = select_area(prev)
+[r0, r1, c0, c1] = returncorners(mask)
+height = r1 - r0
+width = c1 - c0
+avg = [0, 0]
+centers =[]
 cond = True
 while(cond):
     
@@ -26,9 +30,11 @@ while(cond):
     #draw roi
     #get corners of mask:
     [r0, r1, c0, c1] = returncorners(mask)
+    centers.append([c0 + width/2 ,r0 + height/2 ])
     
     #draw them
     cv2.rectangle(prev, (c0, r0), (c1, r1), (255, 255, 255))
+    cv2.polylines(prev, [np.array(centers, dtype=np.int0)], False, (255, 255, 255))
     cv2.imshow("input", prev)    
 
     key = cv2.waitKey(30)
@@ -46,26 +52,26 @@ while(cond):
         cond=False
         break
     
-    #get the change in posititions:
-   # det = 'sift'
+   #get the change in posititions:
+    det = 'surf'
     
-   # kp0, descriptors0 = getpts(mask, prev, det)
-   # kp1, descriptors1 = getpts(mask, next, det)
+    kp0, descriptors0 = getpts(mask, prev, det)
+    kp1, descriptors1 = getpts(mask, next, det)
     
-   # kp_pairs, status, H = matchpts(kp0, descriptors0, kp1, descriptors1, det)
+    kp_pairs, status, H = matchpts(kp0, descriptors0, kp1, descriptors1, det)
     
-   # if len(kp_pairs) > 0:
-   #     explore_match("test", prev, next, kp_pairs, mask)
-   # else:
-   #     print 'No matches found :/'
-   #     break
+    if len(kp_pairs) > 0:
+        explore_match("test", prev, next, kp_pairs, mask)
+    else:
+        print 'No matches found :/'
+        break
         
-    #p0, p1 = get_pts(kp_pairs)
+    p0, p1 = get_pts(kp_pairs)
      
-    #out0, out1 = remove_outliers(kp_pairs)
+    out0, out1 = remove_outliers(kp_pairs)
     
-    #avg = avg_vec(out0, out1)
-    avg = [5, 5]
+    avg = avg_vec(out0, out1)
+    #avg = [5, 5]
          
     #update mask for next round
     mask = updateroi(mask, avg)

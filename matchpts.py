@@ -5,7 +5,7 @@ use('Qt4Agg')
 from matplotlib.widgets import  RectangleSelector
 from pylab import *
 import cv2
-
+from updateroi import returncorners
 
 def better_mask(mask0, im0):
     """Uses OpenCV's blob detector to try and define a better mask such that
@@ -28,7 +28,7 @@ def init_feature(name):
     """Copied from find_obj in OpenCV python2 examples"""
     chunks = name.split('-')
     if chunks[0] == 'sift':
-        detector = cv2.SIFT(nfeatures=5)
+        detector = cv2.SIFT(nfeatures=10)
         norm = cv2.NORM_L2
     elif chunks[0] == 'surf':
         detector = cv2.SURF(400)
@@ -105,8 +105,10 @@ def explore_match(win, img1, img2, kp_pairs, mask=None, status = None, H = None)
     img2 = 255*cv2.cvtColor(img2, cv2.COLOR_RGB2GRAY) 
     if mask != None:
         mask = cv2.cvtColor(mask.astype('float32'), cv2.COLOR_RGB2GRAY)
-        img1 = img1*mask
-        img2 = img2*mask
+        [r0, r1, c0, c1] = returncorners(mask)
+        cv2.rectangle(img1, (c0, r0), (c1, r1), (255, 255, 255))
+        cv2.rectangle(img2, (c0, r0), (c1, r1), (255, 255, 255))
+      
     
  
     vis = np.zeros((max(h1, h2), w1+w2), np.uint8)

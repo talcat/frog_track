@@ -85,8 +85,9 @@ def create_mask(startx, starty, endx, endy, im):
     minr = np.min([starty, endy])
     maxc = np.max([startx, endx])
     maxr = np.max([starty, endy])
+
     
-    mask[minr:maxr, minc:maxc, :] = 1
+    mask[minr:maxr+1, minc:maxc+1, :] = 1
     return mask
 
 if __name__ == "__main__":

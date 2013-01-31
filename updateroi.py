@@ -19,13 +19,13 @@ def updateroi(mask0, change):
     r0, r1, c0, c1 = returncorners(mask0)
     
     #move the corners appropriately
-    #r0 = r0 + change[0]
-    #r1 = r1 + change[0]
-    #c0 = c0 + change[1]
-    #c1 = c1 + change[1]    
+    r0 = r0 + change[1]
+    r1 = r1 + change[1]
+    c0 = c0 + change[0]
+    c1 = c1 + change[0]    
     
     #get the mask
-    mask = create_mask(c0+change[1], r0+change[0], c1+change[1], r1+change[0], mask0)
+    mask = create_mask(c0, r0, c1, r1, mask0)
             
     return mask
     
