@@ -7,9 +7,11 @@ from recsel import *
 from matchpts import *
 from backgroundsub import FrogFrames
 
+DELTA_T = .002
+PATH = '/home/talcat/Desktop/Bio Interface/Frogs/frog_frame/Shot2/'
+
 #Get frog videos
-video = FrogFrames('/home/talcat/Desktop/Bio Interface/Frogs/frog_frame/Shot2/', 
-                    loop=True, gray=False)
+video = FrogFrames(PATH, loop=True, gray=False)
 
 #video.list = video.list[0:5]
 #intialize mask
@@ -22,6 +24,8 @@ width = c1 - c0
 avg = [0, 0]
 centers =[]
 cond = True
+deltax = []
+time = []
 
 cv2.namedWindow("input")
 while(cond):
@@ -66,19 +70,20 @@ while(cond):
     
     kp_pairs, status, H = matchpts(kp_prev, descriptors_prev, 
                                    kp_next, descriptors_next, det)
-    matches = False
-    while not matches:
-         if len(kp_pairs) > 0:
-              print 'Explore!'
-              explore_match("test", prev, next, kp_pairs, mask)
-              matches = True
-         else:
-              print 'No matches found - finding new prev features...'
-              kp_prev, descriptors_prev = getpts(mask, prev, det)
-              kp_pairs, status, H = matchpts(kp_prev, descriptors_prev, 
+
+    if len(kp_pairs) > 3:
+       print 'Explore!'
+       explore_match("test", prev, next, kp_pairs, mask)
+       matches = True
+    else:
+        print 'No matches found - finding new prev features...'
+        kp_prev, descriptors_prev = getpts(mask, prev, det)
+        kp_pairs, status, H = matchpts(kp_prev, descriptors_prev, 
                                          kp_next, descriptors_next, det)
-        
-              
+            
+        if len(kp_pairs)==0:
+            print 'Nope, out of luck'
+            break              
     
         
         
@@ -93,7 +98,10 @@ while(cond):
     
     avg = avg_vec(out_prev, out_next)
     #avg = [5, 5]
-         
+    deltax.append(np.sqrt(avg[0]**2 + avg[1]**2))     
+    time.append(DELTA_T*prev_idx)
+    
+    
     #update mask for next round
     mask = updateroi(mask, avg)
     
@@ -106,4 +114,4 @@ while(cond):
     descriptors_prev= np.array(map(list, descriptors_prev))
     
     #print(video.index)
-cv2.destroyAllWindows()
+#cv2.destroyAllWindows()

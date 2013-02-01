@@ -83,8 +83,10 @@ def filter_matches(kp1, kp2, matches, ratio = 0.75):
     for m in matches:
         if len(m) == 2 and m[0].distance < m[1].distance * ratio:
             m = m[0]
-            mkp1.append( kp1[m.queryIdx] )
-            mkp2.append( kp2[m.trainIdx] )
+            #I don't know why this happens sometimes....might as well catch it
+            if m.queryIdx < len(kp1) and m.trainIdx < len(kp2):
+                mkp1.append( kp1[m.queryIdx] )
+                mkp2.append( kp2[m.trainIdx] )
     p1 = np.float32([kp.pt for kp in mkp1])
     p2 = np.float32([kp.pt for kp in mkp2])
     kp_pairs = zip(mkp1, mkp2)
@@ -162,7 +164,7 @@ def matchpts(kp0, des0, kp1, des1, matcher='surf'):
     _, matcher = init_feature(matcher)
     
     raw_matches = matcher.knnMatch(des0, trainDescriptors = des1, k = 2) 
-    pdb.set_trace()
+    #pdb.set_trace()
    
     p0, p1, kp_pairs = filter_matches(kp0, kp1, raw_matches)
     
