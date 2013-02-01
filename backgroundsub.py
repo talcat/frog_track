@@ -48,7 +48,7 @@ class FrogFrames:
             
         self.index = self.index+1    
         
-        return im
+        return im, self.index-1
 
     def get_frame(self, num):
         """Returns frame number <num> mod number of frames

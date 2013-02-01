@@ -10,10 +10,10 @@ from backgroundsub import FrogFrames
 #Get frog videos
 video = FrogFrames('/home/talcat/Desktop/Bio Interface/Frogs/frog_frame/Shot2/', 
                     loop=True, gray=False)
-cv2.namedWindow("input")
+
 #video.list = video.list[0:5]
 #intialize mask
-prev = video.get_next_im()
+prev, prev_idx = video.get_next_im()
 
 mask = select_area(prev)
 [r0, r1, c0, c1] = returncorners(mask)
@@ -22,6 +22,8 @@ width = c1 - c0
 avg = [0, 0]
 centers =[]
 cond = True
+
+cv2.namedWindow("input")
 while(cond):
     
     #show previous image:
@@ -45,32 +47,51 @@ while(cond):
     
     
     #get next image
-    idx = video.index
-    next = video.get_next_im()
+    
+    next, next_idx = video.get_next_im()
     
     if next == None:
         cond=False
         break
     
    #get the change in posititions:
-    det = 'surf'
+    det = 'orb'
     
-    kp0, descriptors0 = getpts(mask, prev, det)
-    kp1, descriptors1 = getpts(mask, next, det)
+
     
-    kp_pairs, status, H = matchpts(kp0, descriptors0, kp1, descriptors1, det)
+    if prev_idx == 0:
+        kp_prev, descriptors_prev = getpts(mask, prev, det)
     
-    if len(kp_pairs) > 0:
-        explore_match("test", prev, next, kp_pairs, mask)
-    else:
-        print 'No matches found :/'
-        break
+    kp_next, descriptors_next = getpts(mask, next, det)
+    
+    kp_pairs, status, H = matchpts(kp_prev, descriptors_prev, 
+                                   kp_next, descriptors_next, det)
+    matches = False
+    while not matches:
+         if len(kp_pairs) > 0:
+              print 'Explore!'
+              explore_match("test", prev, next, kp_pairs, mask)
+              matches = True
+         else:
+              print 'No matches found - finding new prev features...'
+              kp_prev, descriptors_prev = getpts(mask, prev, det)
+              kp_pairs, status, H = matchpts(kp_prev, descriptors_prev, 
+                                         kp_next, descriptors_next, det)
         
-    p0, p1 = get_pts(kp_pairs)
-     
-    out0, out1 = remove_outliers(kp_pairs)
+              
     
-    avg = avg_vec(out0, out1)
+        
+        
+    p_prev, p_next = get_xy(kp_pairs)
+    
+    #if there are <= 5 points to track, do not remove outliers 
+    if len(kp_pairs) > 5:
+        out_prev, out_next = remove_outliers(kp_pairs)
+    else: # no outliers
+        out_prev = [kpp[0] for kpp in kp_pairs]
+        out_next = [kpp[1] for kpp in kp_pairs]
+    
+    avg = avg_vec(out_prev, out_next)
     #avg = [5, 5]
          
     #update mask for next round
@@ -78,6 +99,11 @@ while(cond):
     
     #next --> prev
     prev = next     
+    prev_idx = next_idx
+    kp_prev = out_next
+    descriptors_prev = [descriptors_next[i] for i in range(len(descriptors_next)) 
+                        if kp_next[i].pt in map(lambda x: x.pt, out_next)]
+    descriptors_prev= np.array(map(list, descriptors_prev))
     
     #print(video.index)
 cv2.destroyAllWindows()

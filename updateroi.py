@@ -9,7 +9,7 @@ from recsel import create_mask
 
 
 def updateroi(mask0, change):
-    """Given the vector flow from 2 images (change = [r, c]) and the mask to 
+    """Given the vector flow from 2 images (change = [x, y]) and the mask to 
     change, returns a mask that has been moved by that amount"""
     
     #first map the change vector to int to move the mask

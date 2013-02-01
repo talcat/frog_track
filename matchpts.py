@@ -6,6 +6,7 @@ from matplotlib.widgets import  RectangleSelector
 from pylab import *
 import cv2
 from updateroi import returncorners
+import pdb
 
 def better_mask(mask0, im0):
     """Uses OpenCV's blob detector to try and define a better mask such that
@@ -161,8 +162,8 @@ def matchpts(kp0, des0, kp1, des1, matcher='surf'):
     _, matcher = init_feature(matcher)
     
     raw_matches = matcher.knnMatch(des0, trainDescriptors = des1, k = 2) 
-
-    
+    pdb.set_trace()
+   
     p0, p1, kp_pairs = filter_matches(kp0, kp1, raw_matches)
     
     if len(p0) >= 4:
@@ -174,95 +175,112 @@ def matchpts(kp0, des0, kp1, des1, matcher='surf'):
     
     return kp_pairs, status, H
    
-def get_pts(kp_pairs):
+def get_xy(kp_pairs):
     """Given the matched pairs of KeyPoints, will return 2 numpy arrays (1 for
-    each image) of the point locations of matched points"""
+    each image) of the point locations of matched points in [x, y] = [c, r]"""
     p1 = np.int32([kpp[0].pt for kpp in kp_pairs])
     p2 = np.int32([kpp[1].pt for kpp in kp_pairs]) 
     
     return p1, p2
     
+ 
+
+    
 def euc_dis(p0, p1):
-    """Given a pair of points: [p0r, p0c] and [p1r, p1c] will return the euclidian
+    """Given a pair of points: [p0x, p0y] and [p1x, p1y] will return the euclidian
     distance between them = i.e. the distance that point moved between two images."""
     
-    p0r, p0c = p0
-    p1r, p1c = p1
+    p0x, p0y = p0
+    p1x, p1y = p1
      
-    dis = np.sqrt( (p1r - p0r)**2 + (p1c - p0c)**2)
+    dis = np.sqrt( (p1x - p0x)**2 + (p1y - p0y)**2)
      
     return dis
        
 def direc(p0, p1):
-    """Given a pair of points [p0r, p0c] and [p1r, p1c] will return the the angle
-    AKA direction in radians that the point moved"""
+    """Given a pair of points (extracted  to [x, y]) will return the the angle
+    AKA direction in radians that the point moved
+    INPUT: pair of [x, y]
+    OUTPUT: angle"""
     
-    p0r, p0c = p0
-    p1r, p1c = p1
+    p0x, p0y = p0
+    p1x, p1y = p1
     
-    delr = p1r - p0r
-    delc = p1c - p0c
+    delx = p1x - p0x
+    dely = p1y - p0y
     #np.arctan2(y, x)
-    return np.arctan2(delr, delc)       
+    return np.arctan2(dely, delx)       
        
 
 def remove_outliers(kp_pairs):
     """For kp_pairs, removes the point pairs that are outliers depending on the 
-    vector magnitude and vector angle according to 'any poin tthat is more than 
-    1.5 IQRs (interquantile range) below the first anf above the 3rd quantile"""
-    p0, p1 = get_pts(kp_pairs)
+    vector magnitude and vector angle according to 'any poin that is more than 
+    1.5 IQRs (interquantile range) below the first and above the 3rd quantile
+    INPUT: kp_pairs [(KeyPoint_0, KeyPoint_1), ...] i.e. matched KP btw 2 images
+    OUTPUT: [KeyPoint_0], [KeyPoint1] list of the matched KP with outliers removed
+    """
+    p0, p1 = get_xy(kp_pairs)
     
-    corr = [ (p0[1], p1[i]) for i in range(len(p0))]
+    corr = [ (p0[i], p1[i]) for i in range(len(p0))]
     dis = map(lambda (x, y): euc_dis(x, y), corr) 
     ang = map(lambda (x, y): direc(x, y), corr) 
     
     #for distance
     dis2 = np.sort(dis)
-    med = np.median(dis2)
-    low50 = dis2[dis2<med]
-    high50 = dis2[dis2>med]
-    dlowmed = np.median(low50)
-    dhighmed = np.median(high50)
+    #med = np.median(dis2)
+    #low50 = dis2[dis2<med]
+    #high50 = dis2[dis2>med]
+    #dlowmed = np.median(low50)
+    #dhighmed = np.median(high50)
+    dlowmed = np.percentile(dis2, 25)
+    dhighmed = np.percentile(dis2, 75)
     
     dIQR = 1.5*(dhighmed - dlowmed)  # 3rd quant - 1st quant
-    #dis = np.array(dis)
-    #dis = dis[dis <= (highmed + IQR)]
-    #dis = dis[dis >= (lowmed - IQR)]
     
     #for direction
     ang2 = np.sort(ang)
-    med = np.median(ang2)
-    low50 = ang2[ang2<med]
-    high50 = ang2[ang2>med]
-    alowmed = np.median(low50)
-    ahighmed = np.median(high50)
+    #med = np.median(ang2)
+    #low50 = ang2[ang2<med]
+    #high50 = ang2[ang2>med]
+    #alowmed = np.median(low50)
+    #ahighmed = np.median(high50)
+    alowmed = np.percentile(ang2, 25)
+    ahighmed = np.percentile(ang2, 75)
+    
     
     aIQR = 1.5*(ahighmed - alowmed)  # 3rd quant - 1st quant
-    #ang = np.array(ang)
-    #ang = ang[ang <= (highmed + IQR)]
-    #ang = ang[ang >= (lowmed - IQR)]
     
-    p0 = np.array(p0)
-    p1 = np.array(p1)
     
-    p0 = p0[(ang <= (ahighmed + aIQR)) & (ang >= (alowmed - aIQR)) & 
-            (dis <= (dhighmed + dIQR)) & (dis >= (dlowmed - dIQR))] 
-    p1 = p1[(ang <= (ahighmed + aIQR)) & (ang >= (alowmed - aIQR)) & 
-            (dis <= (dhighmed + dIQR)) & (dis >= (dlowmed - dIQR))] 
     
-    return p0, p1
+    kp0 = np.array([kpp[0] for kpp in kp_pairs])
+    kp1 = np.array([kpp[1] for kpp in kp_pairs])
+    
+    #pick the outliers in the input array using the IQR constraint 
+    ## for distance
+    discond = (dis <= (dhighmed + dIQR)) & (dis >= (dlowmed - dIQR))
+    ## for angle 
+    angcond = (ang <= (ahighmed + aIQR)) & (ang >= (alowmed - aIQR))
+    
+    #pdb.set_trace()
+    
+    kp0 = kp0[discond & angcond] 
+    kp1 = kp1[discond & angcond] 
+    
+    return kp0, kp1
 
 
-def avg_vec(out0, out1):
-    """Given a list of points [[p0r, p0c]], [[p1r, p1c]] will calculate the 
-    avg vector"""
+def avg_vec(out_kp0, out_kp1):
+    """Given 2 lists of KeyPoints Objects will calculate the averge vector"""
+    
+    pairs = [(out_kp0[i], out_kp1[i]) for i in range(len(out_kp0))]
+    out0, out1 = get_xy(pairs)
     
     length = len(out0)
     delta = out1 - out0
-    r = mean(delta[:, 0])
-    c = mean(delta[:, 1])
+    x = mean(delta[:, 0])
+    y = mean(delta[:, 1])
     
-    return [r, c]
+    return [x, y]
     
 
 
@@ -284,13 +302,13 @@ if __name__ == "__main__":
         print 'No matches found :/'
 
         
-    p0, p1 = get_pts(kp_pairs)
+    p0, p1 = get_xy(kp_pairs)
     
     #corr = [ (p0[1], p1[i]) for i in range(len(p0))]
     #dis = map(lambda (x, y): euc_dis(x, y), corr) 
     #ang = map(lambda (x, y): direc(x, y), corr) 
     
-    out0, out1 = remove_outliers(kp_pairs)
+    out_kp0, out_kp1 = remove_outliers(kp_pairs)
     
-    avg = avg_vec(out0, out1)
+    avg = avg_vec(out_kp0, out_kp1)
          
