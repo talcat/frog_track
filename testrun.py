@@ -6,16 +6,29 @@ from updateroi import *
 from recsel import *
 from matchpts import *
 from backgroundsub import FrogFrames
+from copy import copy
+#from videohelp import *
+from cv import CV_FOURCC
 
 DELTA_T = .002
 PATH = '/home/talcat/Desktop/Bio Interface/Frogs/frog_frame/Shot2/'
+DET = 'surf'
+
 
 #Get frog videos
-video = FrogFrames(PATH, loop=True, gray=False)
+video = FrogFrames('/home/talcat/Desktop/Bio Interface/Frogs/frog_frame/Shot2/',
+                    loop=True, gray=False)
 
 #video.list = video.list[0:5]
 #intialize mask
 prev, prev_idx = video.get_next_im()
+
+#Set up videowrite obj
+hei, wid, _ = prev.shape
+writer1 = cv2.VideoWriter('%strack.mp4' %PATH, CV_FOURCC('D', 'I', 'V', 'X'), fps=25, 
+                        frameSize=(wid, hei))
+writer2 =cv2.VideoWriter('%sfeature.mp4' %PATH, CV_FOURCC('D', 'I', 'V', 'X'), fps=25, 
+                        frameSize=(wid*2, hei))
 
 mask = select_area(prev)
 [r0, r1, c0, c1] = returncorners(mask)
@@ -25,23 +38,29 @@ avg = [0, 0]
 centers =[]
 cond = True
 deltax = []
+deltay = []
 time = []
 
 cv2.namedWindow("input")
 while(cond):
     
     #show previous image:
-    
-    cv2.imshow("input", prev)
+    prevtoshow = copy(prev)
+    cv2.imshow("input", prevtoshow)
+
     #draw roi
     #get corners of mask:
     [r0, r1, c0, c1] = returncorners(mask)
     centers.append([c0 + width/2 ,r0 + height/2 ])
     
-    #draw them
-    cv2.rectangle(prev, (c0, r0), (c1, r1), (255, 255, 255))
-    cv2.polylines(prev, [np.array(centers, dtype=np.int0)], False, (255, 255, 255))
-    cv2.imshow("input", prev)    
+    #draw them on the copy (do not change and pass original prev)
+    cv2.rectangle(prevtoshow, (c0, r0), (c1, r1), (255, 255, 255))
+    cv2.polylines(prevtoshow, [np.array(centers, dtype=np.int0)], False, (0, 255, 0))
+    cv2.imshow("input", prevtoshow)    
+
+    if writer1.isOpened():
+        print 'frame written'
+        wrtier1.write(prevtoshow)
 
     key = cv2.waitKey(30)
     #cv2.imwrite("./pngs/image-"+str(a).zfill(5)+".png", fgmask)
@@ -59,29 +78,28 @@ while(cond):
         break
     
    #get the change in posititions:
-    det = 'orb'
-    
-
     
     if prev_idx == 0:
-        kp_prev, descriptors_prev = getpts(mask, prev, det)
+        kp_prev, descriptors_prev = getpts(mask, prev, DET)
     
-    kp_next, descriptors_next = getpts(mask, next, det)
+    kp_next, descriptors_next = getpts(mask, next, DET)
     
     kp_pairs, status, H = matchpts(kp_prev, descriptors_prev, 
-                                   kp_next, descriptors_next, det)
+                                   kp_next, descriptors_next, DET)
 
     if len(kp_pairs) > 3:
        print 'Explore!'
-       explore_match("test", prev, next, kp_pairs, mask)
-       matches = True
+       #explore_match("test", prev, next, kp_pairs, mask)
     else:
         print 'No matches found - finding new prev features...'
-        kp_prev, descriptors_prev = getpts(mask, prev, det)
+        kp_prev, descriptors_prev = getpts(mask, prev, DET)
         kp_pairs, status, H = matchpts(kp_prev, descriptors_prev, 
-                                         kp_next, descriptors_next, det)
+                                         kp_next, descriptors_next, DET)
             
-        if len(kp_pairs)==0:
+        if len(kp_pairs)!=0:
+            print 'Explore!'
+            #explore_match("test", prev, next, kp_pairs, mask)
+        else:    
             print 'Nope, out of luck'
             break              
     
@@ -96,9 +114,16 @@ while(cond):
         out_prev = [kpp[0] for kpp in kp_pairs]
         out_next = [kpp[1] for kpp in kp_pairs]
     
+    out_pairs = [(out_prev[i], out_next[i]) for i in range(len(out_prev))]
+    vis = explore_match("test", prev, next, out_pairs, mask)
+    if writer2.isOpened():
+        print 'frame written'
+        writer2.write(vis)
+    
     avg = avg_vec(out_prev, out_next)
     #avg = [5, 5]
-    deltax.append(np.sqrt(avg[0]**2 + avg[1]**2))     
+    deltax.append(avg[0])    
+    deltay.append(avg[1])
     time.append(DELTA_T*prev_idx)
     
     
@@ -115,3 +140,5 @@ while(cond):
     
     #print(video.index)
 #cv2.destroyAllWindows()
+writer1.release()
+writer2.release()
