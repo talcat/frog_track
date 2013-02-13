@@ -7,8 +7,8 @@ from matplotlib.widgets import  RectangleSelector
 from matplotlib.ticker import LinearLocator, FixedLocator
 from pylab import imread, imshow, show, figure, subplot, title, close, connect, axes, gca
 from scipy.misc import imsave
-import sys, os, re
-from FrogFrames import *
+
+
 
 def select_prim_ROI(input_image):
     """Given an input image, will allow you to draw a rectangle arount a ROI
@@ -57,7 +57,8 @@ def select_prim_ROI(input_image):
         bx.yaxis.set_ticklabels([int(minr), int(maxr)])
     
         fig.canvas.draw() 
-    
+        fig.set_size_inches(20, 10, forward=True)
+        
         return    
     
     to_plot(im, (0, st_row), (0, st_col))
@@ -111,11 +112,22 @@ def select_prim_ROI(input_image):
 
       
     toggle_selector.ROI = start_ROI
-    toggle_selector.RS = RectangleSelector(ax, onselect, drawtype='box')
+    toggle_selector.RS = RectangleSelector(ax, onselect, drawtype='box', 
+                rectprops = dict(facecolor='none', edgecolor = 'white',
+                                alpha=1, fill=False))
     connect('key_press_event', toggle_selector)
     show(block=True)
         
      
     return toggle_selector.range
+    
+    
+if __name__ == "__main__":
+    im = imread('im-0.png')
+    test = select_prim_ROI(im)
+    (minr, maxr), (minc, maxc) = test
+    imshow(im[minr:maxr, minc:maxc, :])
+    show()
+    print test
     
 

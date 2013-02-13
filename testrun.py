@@ -5,7 +5,7 @@
 from updateroi import *
 from recsel import *
 from matchpts import *
-from Frog Frames import *
+from FrogFrames import *
 from copy import copy
 #from videohelp import *
 from cv import CV_FOURCC
