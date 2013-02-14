@@ -29,7 +29,7 @@ def select_prim_ROI(input_image):
     fig = figure(1)
     
     start_ROI = np.ones(im.shape)
-    st_row, st_col, _ = start_ROI.shape
+    st_row, st_col = start_ROI.shape[0:2]
     ax = subplot(211) 
     
     def to_plot(orig_im, (minr, maxr), (minc, maxc)):
@@ -40,7 +40,7 @@ def select_prim_ROI(input_image):
         title('Input Image')
         bx = subplot(212)
         title('Selected ROI')
-        subim = orig_im[minr:maxr, minc:maxc, :]    
+        subim = orig_im[minr:maxr, minc:maxc]    
         bx.imshow(subim, interpolation='none')
     
         #Set ticks to limits of image
@@ -50,7 +50,7 @@ def select_prim_ROI(input_image):
         bx.yaxis.set_major_locator(LinearLocator(2))
     
         #name them?
-        row, col, _ = im.shape
+        row, col = im.shape[0:2]
         ax.xaxis.set_ticklabels([0, col])
         ax.yaxis.set_ticklabels([0, row])
         bx.xaxis.set_ticklabels([int(minc), int(maxc)])
@@ -70,7 +70,7 @@ def select_prim_ROI(input_image):
         maxc = np.max([startx, endx])
         maxr = np.max([starty, endy])
 
-        return im[minr:maxr, minc:maxc, :], np.round([(minr, maxr), (minc, maxc)])
+        return im[minr:maxr, minc:maxc], np.round([(minr, maxr), (minc, maxc)])
     
     
     def onselect(eclick, erelease):

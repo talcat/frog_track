@@ -47,8 +47,8 @@ def select_COM(input_image, (minr, maxr), (minc, maxc)):
     
     def to_plot(orig_im, (minr, maxr), (minc, maxc), subim_pt=None):
         #subim_pt is the COM from the subimage = (row, col) in SUBIM COORD
-        subim = orig_im[minr:maxr, minc:maxc, :]
-        nrow, ncol, _ = orig_im.shape          
+        subim = orig_im[minr:maxr, minc:maxc]
+        nrow, ncol = orig_im.shape[0:2]          
         #Subplots on top of each other
         #ax = subplot2grid( (2, 2), (0, 0) ) #subimage for selecting
         ax = subplot(221)

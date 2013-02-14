@@ -86,7 +86,7 @@ def move_roi(roiobj, prev_ptobj, next_ptobj):
 
 
 if __name__ == "__main__":
-    video = FrogFrames(PATH, loop=False, gray=False)
+    video = FrogFrames(PATH, loop=False, gray=False, eq=True)
     
     #ROI List
     # | 0 | 1 | 2 | 3 | 4 | ..  <- Frame number
@@ -149,4 +149,6 @@ if __name__ == "__main__":
         print 'idx = %d, len(ROI_list) = %d' %(idx, len(ROI_list))
         
         print idx    
+        string = '%s%s' % (video.path, video.list[video.index])
+        print string
             
