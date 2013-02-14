@@ -69,7 +69,7 @@ class Point(np.ndarray):
         self.col = self.x
         self.row = self.y        
 
-def move_roi(roiobj, prev_ptobj, next_ptobj):
+def move_roi(roiobj, prev_ptobj, next_ptobj, height, width):
     """Returns a new ROI that has moved depending on the com points selected"""
     p_ptr, p_ptc = prev_ptobj
     n_ptr, n_ptc = next_ptobj
@@ -77,16 +77,20 @@ def move_roi(roiobj, prev_ptobj, next_ptobj):
     move_r = n_ptr - p_ptr
     move_c = n_ptc - p_ptc
     
-    print (move_r, move_c)
+    #print (move_r, move_c)
     
-    moved_roi = RecROI( np.array([[roiobj.minr + move_r, roiobj.maxr + move_r],     
-                                  [roiobj.minc + move_c, roiobj.maxc + move_c]]))
+    if ((roiobj.minr + move_r <=0 ) or (roiobj.maxr + move_r >= height) or
+       (roiobj.minc + move_c <= 0) or  (roiobj.maxc + move_c >= width)):
+        moved_roi = roiobj   
+    else:
+        moved_roi = RecROI( np.array([[roiobj.minr + move_r, roiobj.maxr + move_r],     
+                                      [roiobj.minc + move_c, roiobj.maxc + move_c]]))
     return moved_roi
                         
 
 
 if __name__ == "__main__":
-    video = FrogFrames(PATH, loop=False, gray=False, eq=True)
+    video = FrogFrames(PATH, loop=False, gray=False, eq=True  )
     
     #ROI List
     # | 0 | 1 | 2 | 3 | 4 | ..  <- Frame number
@@ -118,8 +122,16 @@ if __name__ == "__main__":
         
         # Get the point of com
         rows, cols = ROI
-        COM = select_COM(frame,rows, cols)
+        COM, ROI = select_COM(frame,rows, cols)
         
+        #If manually moved ROI, reset it
+        ROI_obj = RecROI(ROI)
+        ROI_list[idx] = ROI_obj
+        
+        if COM == None: # No point selected (probably out of frame):
+            cond = False
+            break
+            
         COM_obj = Point(COM) 
         #print COM_obj    
         
@@ -140,7 +152,7 @@ if __name__ == "__main__":
             continue #We are done with frame 0
         #calculate next roi for frame 1 --> end
         prevpt = COM_list[idx - 1]
-        newroi = move_roi(ROI_obj, prevpt, COM_obj)
+        newroi = move_roi(ROI_obj, prevpt, COM_obj, frame.shape[0], frame.shape[1])
         #now we want to save that such that it is in idx +1 slot for next round
         ROI_list.append(newroi)
         

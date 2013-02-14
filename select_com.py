@@ -35,8 +35,12 @@ def select_COM(input_image, (minr, maxr), (minc, maxc)):
            
     
     im = input_image
+    nrow, ncol = im.shape[0:2] 
     fig = figure(1)
   
+    #find 10% movement in up/down or left/right for ROI moving purposes
+    wid_mv = int((maxc - minc)/10)
+    hei_mv = int((maxr - minr)/10)
     
     #grid setup
     #ax = subplot2grid( (2, 2), (0, 0) ) #subimage for selecting
@@ -45,8 +49,8 @@ def select_COM(input_image, (minr, maxr), (minc, maxc)):
     bx = subplot(222)
     cx = subplot2grid ( (2,2), (1, 0), colspan=2) #full image showing point
     
-    def to_plot(orig_im, (minr, maxr), (minc, maxc), subim_pt=None):
-        #subim_pt is the COM from the subimage = (row, col) in SUBIM COORD
+    def to_plot(orig_im, (minr, maxr), (minc, maxc), fulim_pt=None):
+        #filim_pt is the COM from the subimage = (row, col) in FULL IM COORD
         subim = orig_im[minr:maxr, minc:maxc]
         nrow, ncol = orig_im.shape[0:2]          
         #Subplots on top of each other
@@ -68,17 +72,18 @@ def select_COM(input_image, (minr, maxr), (minc, maxc)):
         title('Full Image')
         
         #Draw COM if we have one
-        if subim_pt != None:
-            ptr, ptc = subim_pt
+        if fulim_pt != None:
+            ptr_full, ptc_full = fulim_pt
+            #get the subim points
+            ptr = ptr_full - minr
+            ptc = ptc_full - minc
             #draw a circle around the COM
             ## Circle goes (x, y) = (col, row)
             #In the subimage
-            c = Circle( (ptc, ptr), 3, facecolor='none', edgecolor='red', linewidth=1)
+            c = Circle( (ptc, ptr), 3, facecolor='none', edgecolor='white', linewidth=2)
             bx.add_patch(c)
             #in the full image
-            ptr_full = ptr + minr
-            ptc_full = ptc + minc
-            c = Circle( (ptc_full, ptr_full), 4, facecolor='none', edgecolor='red', linewidth=1)
+            c = Circle( (ptc_full, ptr_full), 4, facecolor='none', edgecolor='white', linewidth=2)
             cx.add_patch(c)
         
         #Set ticks to limits of image
@@ -92,7 +97,7 @@ def select_COM(input_image, (minr, maxr), (minc, maxc)):
         cx.yaxis.set_major_locator(LinearLocator(2))
     
         #name them?
-        row, col, _ = im.shape
+        row, col = im.shape[0:2]
         ax.xaxis.set_ticklabels([int(minc), int(maxc)])
         ax.yaxis.set_ticklabels([int(minr), int(maxr)])
         bx.xaxis.set_ticklabels([int(minc), int(maxc)])
@@ -133,11 +138,36 @@ def select_COM(input_image, (minr, maxr), (minc, maxc)):
 
       toggle_selector.COM_sub = return_COM(startx, starty, endx, endy, im)
       ptr, ptc = toggle_selector.COM_sub
+      (minr, maxr), (minc, maxc) = toggle_selector.ROI
       toggle_selector.COM_ful = [ptr + minr, ptc + minc]
-      to_plot(im, (minr, maxr), (minc, maxc), toggle_selector.COM_sub)
+      (minr, maxr), (minc, maxc) = toggle_selector.ROI
+      to_plot(im, (minr, maxr), (minc, maxc), toggle_selector.COM_ful)
       toggle_selector.RS.update()
 
    
+    def move_ROI(direc):
+        """Moves the ROI in 10% of the wid/height direction the arrow keys 
+        show"""
+        (minr, maxr), (minc, maxc) = toggle_selector.ROI
+        if direc == 'down':
+            if maxr + hei_mv <= nrow:
+                minr = minr + hei_mv
+                maxr = maxr + hei_mv
+        if direc == 'up':
+            if minr - hei_mv >= 0:
+                minr = minr - hei_mv
+                maxr = maxr - hei_mv
+        if direc == 'left':
+            if minc - wid_mv >= 0:
+                minc = minc - wid_mv
+                maxc = maxc - wid_mv
+        if direc == 'right':
+            if maxc + wid_mv<= ncol:
+                minc = minc + wid_mv
+                maxc = maxc + wid_mv
+        toggle_selector.ROI = np.array([ [minr, maxr], [minc, maxc]   ])
+        return toggle_selector.ROI
+    
     
     def toggle_selector(event):
         print ' Key pressed.'
@@ -149,15 +179,25 @@ def select_COM(input_image, (minr, maxr), (minc, maxc)):
 
             
         if event.key in ['R', 'r'] and toggle_selector.RS.active:
-            print 'Redoing rectangle.'
+            print 'Redoing COM.'
             toggle_selector.RS.set_active(True)
             toggle_selector.COM_sub = None
             
-            #bx.imshow(toggle_selector.ROI, interpolation='none')
-            to_plot(im, (minr, maxr), (minc, maxc), toggle_selector.COM_sub)
+            (minr, maxr), (minc, maxc) = toggle_selector.ROI
+            to_plot(im, (minr, maxr), (minc, maxc), None)
+            toggle_selector.COM_ful = None
+            toggle_selector.COM_sub = None
             toggle_selector.RS.update()
+            
+        # Moving an ROI manually with keys up down left right
+        if event.key in ['up', 'down', 'left', 'right']:
+            (minr, maxr), (minc, maxc) = move_ROI(event.key)
+            to_plot(im, (minr, maxr), (minc, maxc), toggle_selector.COM_ful)
+            toggle_selector.RS.update()
+            
 
-      
+
+    toggle_selector.ROI = np.array([ [minr, maxr], [minc, maxc ]  ])  
     toggle_selector.COM_sub = None
     toggle_selector.COM_ful = None
     toggle_selector.RS = RectangleSelector(ax, onselect, drawtype='box', 
@@ -168,7 +208,7 @@ def select_COM(input_image, (minr, maxr), (minc, maxc)):
     show(block=True)
         
      
-    return toggle_selector.COM_ful
+    return toggle_selector.COM_ful, toggle_selector.ROI
     
     
 if __name__ == "__main__":
