@@ -9,13 +9,13 @@ from recsel import *
 from matchpts import *
 from FrogFrames import *
 from copy import copy
-from matplotlib.transforms import Bbox
+
 #from videohelp import *
 #from cv import CV_FOURCC
 
 DELTA_T = .002
-PATH = '/home/talcat/Desktop/Bio Interface/Frogs/frog_frame/Shot2crop_begin/'
-DET = 'surf'
+PATH = '/home/talcat/Desktop/Bio Interface/Frogs/frog_frame/Shot2crop_end/'
+DET = 'orb'
 
 
 #Get frog videos
@@ -51,8 +51,9 @@ fig1 = plt.figure(figsize = figsize, dpi= DPI, frameon=False)
 ax_size=[0,0,1,1]
 fig1.add_axes(ax_size)
 plt.axis('off')
+imaxes = plt.imshow(np.vstack(mask, mask))
 
-with writer.saving(fig1, '%stestmove.mp4' %PATH, DPI):
+with writer.saving(fig1, '%smini_autotrack_orb.mp4' %PATH, DPI):
     while(cond):
     
         #show previous image:
@@ -125,8 +126,8 @@ with writer.saving(fig1, '%stestmove.mp4' %PATH, DPI):
         out_pairs = [(out_prev[i], out_next[i]) for i in range(len(out_prev))]
         vis = explore_match("test", prev, next, out_pairs, mask)
         
-        plt.imshow(vis)
-                   #clip_box = Bbox.from_bounds(0, 0, wid*2, hei))
+        imaxes.set_data(vis)
+                   
         
         writer.grab_frame()
         
