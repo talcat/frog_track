@@ -7,6 +7,7 @@ from matplotlib.widgets import  RectangleSelector
 #from pylab import *
 from pylab import imread, imshow, show, figure, subplot, title, close, connect
 from scipy.misc import imsave
+import matplotlib.pyplot as plt
 
 def select_area(input_image):
     """Given an input image, will allow you to draw a rectangle arount a ROI
@@ -24,11 +25,15 @@ def select_area(input_image):
            
     
     im = input_image
-    fig = figure(1)
-    ax = subplot(211)
+    hei, wid = im.shape[0:2]
+    DPI = 100
+    figsize = (wid/np.float(DPI), hei/np.float(DPI))
+    fig2 = plt.figure(figsize=figsize, dpi=DPI)
+    plt.axis('off')
+    ax = fig2.add_subplot(211)
     ax.imshow(im)
     title('Input Image')
-    bx = subplot(212)
+    bx = fig2.add_subplot(212)
     title('Masked Image')
     start_mask = np.ones(im.shape)
     bx.imshow(start_mask*im)

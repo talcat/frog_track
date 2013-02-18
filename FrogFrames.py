@@ -39,7 +39,7 @@ class FrogFrames:
             if self.loop: 
                 self.index = np.mod(self.index, len(self.list))
             else:
-                return None       
+                return None, np.NaN       
         
         im = imread('%s%s' % (self.path, self.list[self.index]))
         if self.gray or self.eq:
