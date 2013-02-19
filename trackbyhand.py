@@ -90,7 +90,7 @@ def move_roi(roiobj, prev_ptobj, next_ptobj, height, width):
 
 
 if __name__ == "__main__":
-    video = FrogFrames(PATH, loop=False, gray=False, eq=True  )
+    video = FrogFrames(PATH, loop=False, gray=False, eq=False  )
     
     #ROI List
     # | 0 | 1 | 2 | 3 | 4 | ..  <- Frame number

@@ -42,12 +42,18 @@ def select_COM(input_image, (minr, maxr), (minc, maxc)):
     wid_mv = int((maxc - minc)/10)
     hei_mv = int((maxr - minr)/10)
     
+    #wid/hei of subimage to make dummy subim
+    wid = maxc-minc
+    hei = maxr - minr
+    
     #grid setup
     #ax = subplot2grid( (2, 2), (0, 0) ) #subimage for selecting
     ax = subplot(221)
     #bx = subplot2grid( (2, 2), (0, 1)) #subimage showing point
     bx = subplot(222)
     cx = subplot2grid ( (2,2), (1, 0), colspan=2) #full image showing point
+    
+ 
     
     def to_plot(orig_im, (minr, maxr), (minc, maxc), fulim_pt=None):
         #filim_pt is the COM from the subimage = (row, col) in FULL IM COORD
