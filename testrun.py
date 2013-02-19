@@ -14,8 +14,8 @@ from copy import copy
 #from cv import CV_FOURCC
 
 DELTA_T = .002
-PATH = '/home/talcat/Desktop/Bio Interface/Frogs/frog_frame/Shot2crop_end/'
-DET = 'orb'
+PATH = '/home/talcat/Desktop/Bio Interface/Frogs/frog_frame/Shot2/'
+DET = 'sift'
 
 
 #Get frog videos
@@ -46,18 +46,20 @@ time = []
 cv2.namedWindow("input")
 
 DPI = 800
-figsize = (wid*2/np.float(DPI), hei/np.float(DPI))
+figsize = (wid/np.float(DPI), hei/np.float(DPI))
 fig1 = plt.figure(figsize = figsize, dpi= DPI, frameon=False)
 ax_size=[0,0,1,1]
 fig1.add_axes(ax_size)
 plt.axis('off')
-imaxes = plt.imshow(np.vstack(mask, mask))
+imaxes = plt.imshow(mask)
 
-with writer.saving(fig1, '%smini_autotrack_orb.mp4' %PATH, DPI):
+with writer.saving(fig1, '%sfull_autotrack_sift2.mp4' %PATH, DPI):
     while(cond):
     
         #show previous image:
-        prevtoshow = copy(prev)
+        
+        prevtoshow = 255*copy(prev)
+        prevtoshow = prevtoshow.astype('uint8')
         cv2.imshow("input", prevtoshow)
     
         #draw roi
@@ -66,10 +68,15 @@ with writer.saving(fig1, '%smini_autotrack_orb.mp4' %PATH, DPI):
         centers.append([c0 + width/2 ,r0 + height/2 ])
         
         #draw them on the copy (do not change and pass original prev)
-        cv2.rectangle(prevtoshow, (c0, r0), (c1, r1), (255, 255, 255))
-        cv2.polylines(prevtoshow, [np.array(centers, dtype=np.int0)], False, (0, 255, 0))
+        cv2.rectangle(prevtoshow, (c0, r0), (c1, r1), (255, 255, 255), 1)
+        cv2.polylines(prevtoshow, [np.array(centers, dtype=np.int0)], False, (0, 255, 0), 1)
+        
         cv2.imshow("input", prevtoshow)    
-    
+        
+        
+        imaxes.set_data(prevtoshow)    
+        #plt.imshow(prevtoshow)
+        writer.grab_frame()
         
         key = cv2.waitKey(30)
         #cv2.imwrite("./pngs/image-"+str(a).zfill(5)+".png", fgmask)
@@ -126,10 +133,7 @@ with writer.saving(fig1, '%smini_autotrack_orb.mp4' %PATH, DPI):
         out_pairs = [(out_prev[i], out_next[i]) for i in range(len(out_prev))]
         vis = explore_match("test", prev, next, out_pairs, mask)
         
-        imaxes.set_data(vis)
-                   
-        
-        writer.grab_frame()
+
         
         avg = avg_vec(out_prev, out_next)
         #avg = [5, 5]
