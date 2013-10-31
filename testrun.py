@@ -14,7 +14,7 @@ from copy import copy
 #from cv import CV_FOURCC
 
 DELTA_T = .002
-PATH = '/home/talcat/Desktop/Bio Interface/Frogs/frog_frame/Shot2/'
+PATH = '/home/talcat/Desktop/Bio Interface/Frogs/frog_frame/Shot2crop_begin/'
 DET = 'sift'
 
 
@@ -60,7 +60,7 @@ with writer.saving(fig1, '%sfull_autotrack_sift2.mp4' %PATH, DPI):
         
         prevtoshow = 255*copy(prev)
         prevtoshow = prevtoshow.astype('uint8')
-        cv2.imshow("input", prevtoshow)
+        #cv2.imshow("input", prevtoshow)
     
         #draw roi
         #get corners of mask:
@@ -71,7 +71,7 @@ with writer.saving(fig1, '%sfull_autotrack_sift2.mp4' %PATH, DPI):
         cv2.rectangle(prevtoshow, (c0, r0), (c1, r1), (255, 255, 255), 1)
         cv2.polylines(prevtoshow, [np.array(centers, dtype=np.int0)], False, (0, 255, 0), 1)
         
-        cv2.imshow("input", prevtoshow)    
+        #cv2.imshow("input", prevtoshow)    
         
         
         imaxes.set_data(prevtoshow)    
@@ -133,7 +133,8 @@ with writer.saving(fig1, '%sfull_autotrack_sift2.mp4' %PATH, DPI):
         out_pairs = [(out_prev[i], out_next[i]) for i in range(len(out_prev))]
         vis = explore_match("test", prev, next, out_pairs, mask)
         
-
+        #cv2.imshow('hello', vis)
+        cv2.imwrite( '{}sift_frame/{}.png'.format(PATH, prev_idx), vis)
         
         avg = avg_vec(out_prev, out_next)
         #avg = [5, 5]

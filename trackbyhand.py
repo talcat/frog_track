@@ -53,6 +53,8 @@ class RecROI(np.ndarray):
         self.minc = getattr(obj, 'minc', None)
         self.maxc = getattr(obj, 'maxc', None)
         
+    def __getstate(self):
+        return {'minr':self.minr, 'maxr': self.maxr, 'minc':self.minc, 'maxc':self.maxc}
 
 class Point(np.ndarray):
     """Easy way to save points (like the com) into a single obj"""
@@ -68,6 +70,9 @@ class Point(np.ndarray):
         self.y = getattr(obj, 'y', None)
         self.col = self.x
         self.row = self.y        
+    #def __getstate__(self):
+    #    return {'x': self.x, 'y':self.y, 'col': self.col, 'row':self.row}    
+    
 
 def move_roi(roiobj, prev_ptobj, next_ptobj, height, width):
     """Returns a new ROI that has moved depending on the com points selected"""
