@@ -11,8 +11,30 @@ from pylab import imread
 import re
 from FrogFrames import *
         
-    
-if __name__ == "__main__":
+def back_sub(video_fn):
+    try:
+        cap = cv2.VideoCapture(video_fn)
+    except:
+        print "Filename does not exist - Try again?"
+        return
+
+    bg = cv2.BackgroundSubtractorMOG(50, 5, .9, 0.01)
+
+    while True:
+        ret, frame = cap.read()
+        if ret is False:
+            break
+        fgmask = bg.apply(frame)
+
+        cv2.imshow('frame', fgmask)
+        k = cv2.waitKey(30)
+        if k == 27: #esc
+            break
+    cap.release()
+    cv2.destroyAllWindows()
+
+
+if __name__ == "__jhg__":
     bgs = cv2.BackgroundSubtractorMOG(50, 5, .9, 0.01)
 
     video = FrogFrames('/home/talcat/Desktop/Bio Interface/Frogs/frog_frame/Shot2/', False)

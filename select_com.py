@@ -7,7 +7,7 @@ import numpy as np
 use('Qt4Agg')
 from matplotlib.widgets import  RectangleSelector
 from matplotlib.ticker import LinearLocator, FixedLocator
-from pylab import imread, imshow, show, figure, subplot, title, close, connect, Circle, subplot2grid
+from pylab import imread, imshow, show, figure, subplot, title, close, connect, Circle, subplot2grid, Rectangle
 from scipy.misc import imsave
 
 
@@ -76,6 +76,11 @@ def select_COM(input_image, (minr, maxr), (minc, maxc)):
         cx.clear()
         cx.imshow(orig_im, interpolation='none', aspect='equal') 
         title('Full Image')
+        
+        
+        #Draw box around the current ROI:
+        theROI = Rectangle( (minc, minr ), (maxc-minc), (maxr - minr), edgecolor='white', fill=False, linewidth=1 )
+        cx.add_patch(theROI) 
         
         #Draw COM if we have one
         if fulim_pt != None:
@@ -200,6 +205,14 @@ def select_COM(input_image, (minr, maxr), (minc, maxc)):
             (minr, maxr), (minc, maxc) = move_ROI(event.key)
             to_plot(im, (minr, maxr), (minc, maxc), toggle_selector.COM_ful)
             toggle_selector.RS.update()
+        
+        if event.key is 'escape':
+            toggle_selector.RS.set_active(False)
+            close()
+            return toggle_selector.COM_ful
+        
+        else:
+            print "%s key does not do anything!"%(event.key)
             
 
 
